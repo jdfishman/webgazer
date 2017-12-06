@@ -72,6 +72,7 @@
         'js_objectdetect': function() { return new webgazer.tracker.Js_objectdetectGaze(); }
     };
     var regressionMap = {
+        //'trainedRidge': function() {return new webgazer.reg.RidgeRegTrained();},
         'ridge': function() { return new webgazer.reg.RidgeReg(); },
         'weightedRidge': function() { return new webgazer.reg.RidgeWeightedReg(); },
         'threadedRidge': function() { return new webgazer.reg.RidgeRegThreaded(); },
@@ -88,8 +89,24 @@
         'settings': {}
     };
 
+    //Set Regression
+    //webgazer.setRegression("ridgeTrained");
+    //setTrainingParameters();
     
     //PRIVATE FUNCTIONS
+
+    /**
+    * Read the trained initial regression model and insert it in
+    * uses trainedRidgeRegression.
+    * 1 vector of size 120
+    * num training examples
+    */
+    function setTrainingParameters() {
+        //webgazer.regs[0].initParams(trainedData.coefficientsX, trainedData.coefficientsY, trainedData.n);
+        //var parameters = dummyData.parameters.map(Number);
+        //var n = parseInt(dummyData.n);
+    }
+
 
     /**
      * Gets the pupil features by following the pipeline which threads an eyes object through each call:
