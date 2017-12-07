@@ -198,7 +198,7 @@
             var newCoefficientsX = ridge(screenXArray, eyeFeatures, ridgeParameter);
             var newCoefficientsY = ridge(screenYArray, eyeFeatures, ridgeParameter);
 
-            var training_weight = 0.3;
+            var training_weight = Math.exp(-10/screenXArray.length);
             var new_weight = 1-training_weight;
             coefficientsX = trainedCoefficientsX.map(function(x) {return x * training_weight}).map((a, i) => a + newCoefficientsX.map(function(x) {return x * new_weight} )[i]); 
             coefficientsY = trainedCoefficientsY.map(function(x) {return x * training_weight}).map((a, i) => a + newCoefficientsY.map(function(x) {return x * new_weight} )[i]);
