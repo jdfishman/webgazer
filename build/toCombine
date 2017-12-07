@@ -31,3 +31,4 @@
 ../src/ridgeRegThreaded.js
 ../src/util.js
 ../src/webgazer.js
+../src/ridgeRegTrained.js
