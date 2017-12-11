@@ -112,7 +112,7 @@
      * this object allow to perform ridge regression
      * @constructor
      */
-    webgazer.reg.RidgeRegTrained = function() {
+    webgazer.reg.RidgeRegTrained01 = function() {
         this.screenXClicksArray = new webgazer.util.DataWindow(dataWindow);
         this.screenYClicksArray = new webgazer.util.DataWindow(dataWindow);
         this.eyeFeaturesClicks = new webgazer.util.DataWindow(dataWindow);
@@ -128,8 +128,8 @@
         this.dataClicks = new webgazer.util.DataWindow(dataWindow);
         this.dataTrail = new webgazer.util.DataWindow(dataWindow);
 
-        trainedCoefficientsX = trainedData.coefficientsX;
-        trainedCoefficientsY = trainedData.coefficientsY;
+        trainedCoefficientsX = trainedData.coefficientsX.map(function (x) {return x * screen.width});
+        trainedCoefficientsY = trainedData.coefficientsY.map(function (x) {return x * screen.height});
         trainedExamples = trainedData.n;
     };
 
@@ -139,7 +139,7 @@
      * @param {Object} screenPos - The current screen point
      * @param {Object} type - The type of performed action
      */
-    webgazer.reg.RidgeRegTrained.prototype.addData = function(eyes, screenPos, type) {
+    webgazer.reg.RidgeRegTrained01.prototype.addData = function(eyes, screenPos, type) {
         if (!eyes) {
             return;
         }
@@ -171,12 +171,12 @@
      * @param {Object} eyesObj - The current user eyes object
      * @returns {Object}
      */
-    webgazer.reg.RidgeRegTrained.prototype.predict = function(eyesObj) {
+    webgazer.reg.RidgeRegTrained01.prototype.predict = function(eyesObj) {
         if (!eyesObj) {
             return null;
         }
 
-        var coefficientsX = trainedCoefficientsX;;
+        var coefficientsX = trainedCoefficientsX;
         var coefficientsY = trainedCoefficientsY;
         if (this.eyeFeaturesClicks.length != 0) {
             var acceptTime = performance.now() - this.trailTime;
@@ -196,7 +196,9 @@
             var eyeFeatures = this.eyeFeaturesClicks.data.concat(trailFeat);
 
             var newCoefficientsX = ridge(screenXArray, eyeFeatures, ridgeParameter);
+            newCoefficientsX.push(0);
             var newCoefficientsY = ridge(screenYArray, eyeFeatures, ridgeParameter);
+            newCoefficientsY.push(1);
 
             var new_weight = Math.exp(-10/screenXArray.length);
             var training_weight = 1-new_weight;
@@ -205,6 +207,7 @@
         }
 
         var eyeFeats = getEyeFeats(eyesObj);
+        eyeFeats.push(1);
         var predictedX = 0;
         for(var i=0; i< eyeFeats.length; i++){
             predictedX += eyeFeats[i] * coefficientsX[i];
@@ -229,7 +232,7 @@
      * replace current data member with given data
      * @param {Array.<Object>} data - The data to set
      */
-    webgazer.reg.RidgeRegTrained.prototype.setData = function(data) {
+    webgazer.reg.RidgeRegTrained01.prototype.setData = function(data) {
         for (var i = 0; i < data.length; i++) {
             //TODO this is a kludge, needs to be fixed
             data[i].eyes.left.patch = new ImageData(new Uint8ClampedArray(data[i].eyes.left.patch), data[i].eyes.left.width, data[i].eyes.left.height);
@@ -242,7 +245,7 @@
      * Return the data
      * @returns {Array.<Object>|*}
      */
-    webgazer.reg.RidgeRegTrained.prototype.getData = function() {
+    webgazer.reg.RidgeRegTrained01.prototype.getData = function() {
         return this.dataClicks.data.concat(this.dataTrail.data);
     }
     
@@ -250,6 +253,6 @@
      * The RidgeReg object name
      * @type {string}
      */
-    webgazer.reg.RidgeRegTrained.prototype.name = 'ridge';
+    webgazer.reg.RidgeRegTrained01.prototype.name = 'ridge';
     
 }(window));

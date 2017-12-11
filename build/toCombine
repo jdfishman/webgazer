@@ -32,3 +32,4 @@
 ../src/util.js
 ../src/webgazer.js
 ../src/ridgeRegTrained.js
+../src/ridgeRegTrained01.js

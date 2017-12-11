@@ -18,8 +18,10 @@
         <script src="build/webgazer.js"></script>
         <script>
 window.onload = function() {
-        webgazer.addRegressionModule("trainedRidge", webgazer.reg.RidgeRegTrained);
-        webgazer.setRegression('trainedRidge') /* currently must set regression and tracker */
+        webgazer.addRegressionModule("trainedRidge01", webgazer.reg.RidgeRegTrained01);
+        webgazer.setRegression('trainedRidge01')
+        //webgazer.setRegression('ridge')
+        /* currently must set regression and tracker */
         
         .setTracker('clmtrackr')
         .setGazeListener(function(data, clock) {
