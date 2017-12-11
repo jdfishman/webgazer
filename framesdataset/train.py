@@ -13,17 +13,23 @@ testFile = "test_1430_1.txt"
 ridgeParameter = 10**-5
 resizeWidth = 10
 resizeHeight = 6
-alpha = 1 # 0.5-1
+alpha = 0.5 # 0.5-1
 
 leftKalman = None
 rightKalman = None
 
+
 def main():
 	init_kalman_filters()
-	x_weights = np.random.normal(0,.001,resizeWidth*resizeHeight*2)
-	y_weights = np.random.normal(0,.001,resizeWidth*resizeHeight*2)
-	n = 1
+	# x_weights = np.random.normal(0,.001,resizeWidth*resizeHeight*2+1)
+	# y_weights = np.random.normal(0,.001,resizeWidth*resizeHeight*2+1)
+	# n = 1
 
+	feats = []
+	labelsX = []
+	labelsY = []
+
+	# COLLECT TRAINING DATA -----------------
 	with open( trainFile, 'r' ) as trf:
 		for train_dir in trf.readlines():
 
@@ -32,9 +38,7 @@ def main():
 			with open(csv_path, 'r') as csv_file:
 				gaze_csv = csv.reader(csv_file, delimiter=',')
 
-				feats = []
-				labelsX = []
-				labelsY = []
+				
 				for row in gaze_csv:
 					image_path = row[0]
 					labelX = float(row[6])
@@ -46,26 +50,39 @@ def main():
 
 					if eye_feats is not None:
 
+						eye_feats = np.append(eye_feats,[1])
 						feats.append(eye_feats)
 						labelsX.append(labelX)
 						labelsY.append(labelY)
 
-					# #guess labels
-					# guessX = np.dot(x_weights, eye_feats)
-					# guessY = np.dot(y_weights, eye_feats)
-					# error = np.sqrt((guessX-labelX)**2 + (guessY-labelY)**2)
-					# print('Guess: ', guessX, ', ', guessY)
-					# print('Label: ', labelX, ', ', labelY)
-					# print('Error: ', error)
+						# #guess labels
+						# guessX = np.dot(x_weights, eye_feats)
+						# guessY = np.dot(y_weights, eye_feats)
+						# error = np.sqrt((guessX-labelX)**2 + (guessY-labelY)**2)
+						# print('Guess: ', guessX, ', ', guessY)
+						# print('Label: ', labelX, ', ', labelY)
+						# print('Error: ', error)
 
-					# # update weights
-					# x_weights = online_ridge(eye_feats, labelX, n, x_weights)
-					# y_weights = online_ridge(eye_feats, labelY, n, y_weights)
-					# n = n+1
-				if len(feats) > 0:
-					x_weights = ridge(feats, labelsX, ridgeParameter)
-					y_weights = ridge(feats, labelsY, ridgeParameter)
+						# # update weights
+						# x_weights = online_ridge(eye_feats, labelX, n, x_weights)
+						# y_weights = online_ridge(eye_feats, labelY, n, y_weights)
+						# n = n+1
 
+	# TRAIN WEIGHTS -------------------------
+	if len(feats) > 0:
+		x_weights = ridge(feats, labelsX, ridgeParameter)
+		y_weights = ridge(feats, labelsY, ridgeParameter)
+		print('X_WEIGHTS: ', x_weights)
+		print('Y_WEIGHTS: ', y_weights)
+
+	# CALCULATE TEST ERROR ------------------
+	with open( testFile, 'r' ) as file:
+		a=0
+		total_error = 0
+		for train_dir in file.readlines():
+
+			train_dir = train_dir[:-1]
+			csv_path = train_dir + '/gazePredictions.csv'
 			with open(csv_path, 'r') as csv_file:
 				gaze_csv = csv.reader(csv_file, delimiter=',')
 
@@ -81,17 +98,16 @@ def main():
 					if eye_feats is not None:
 
 						# #guess labels
-						guessX = np.dot(x_weights, eye_feats)
-						guessY = np.dot(y_weights, eye_feats)
+						guessX = np.dot(x_weights, np.append(eye_feats,[1]))
+						guessY = np.dot(y_weights, np.append(eye_feats,[1]))
 						error = np.sqrt((guessX-labelX)**2 + (guessY-labelY)**2)
-						print('Guess: ', guessX, ', ', guessY)
-						print('Label: ', labelX, ', ', labelY)
-						print('Error: ', error)
+						# print('Guess: ', guessX, ', ', guessY)
+						# print('Label: ', labelX, ', ', labelY)
+						a=a+1
+						total_error += error
 
-				# # update weights
-				# x_weights = online_ridge(eye_feats, labelX, n, x_weights)
-				# y_weights = online_ridge(eye_feats, labelY, n, y_weights)
-				# n = n+1
+		print('Average error:', total_error/a)
+
 
 
 	trf.close()
@@ -100,8 +116,8 @@ def ridge(X,y,k):
 	A = np.matmul(np.transpose(X), X) + k * np.identity(len(X[0]))
 	b = np.matmul(np.transpose(X), y)
 
-	#weights = scipy.linalg.lu_solve(scipy.linalg.lu_factor(A), b)
-	weights = np.matmul(np.linalg.inv(A), b)
+	weights = scipy.linalg.lu_solve(scipy.linalg.lu_factor(A), b)
+	#weights = np.matmul(np.linalg.inv(A), b)
 	return weights
 
 def online_ridge(X,y,n,weights):
@@ -134,15 +150,16 @@ def init_kalman_filters():
 					[0, 0, 0, 1, 0, 0]])
 	pixel_error = 6.5 # We will need to fine tune this value
 	#This matrix represents the expected measurement error
-	R = pixel_error * np.ones((4,4))
+	R = pixel_error * np.identity(4)
 
-	P_initial = 0.0001 * np.ones((6,6)) #Initial covariance matrix
+	P_initial = 0.0001 * np.identity(6) #Initial covariance matrix
 	x_initial = np.array([[200], [150], [250], [180], [0], [0]]) # Initial measurement matrix
 
 	leftKalman = KalmanFilter(F, H, Q, R, P_initial, x_initial)
 	rightKalman = KalmanFilter(F, H, Q, R, P_initial, x_initial)
 
 def getEyeFeats(image_path, clmfeatures):
+	global leftKalman, rightKalman
 
 	# Fit the detected eye in a rectangle
 	leftOriginX = (clmfeatures[23][0])
@@ -174,8 +191,10 @@ def getEyeFeats(image_path, clmfeatures):
 
 	#eyeObjs = {}
 	image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-	leftImageData = image[leftBox[0]:leftBox[2], leftBox[1]:leftBox[3]]
-	print((leftBox[2]-leftBox[0], leftBox[3] - leftBox[1]))
+	if image is None:
+		return None
+	leftImageData = image[leftBox[1]:leftBox[3],leftBox[0]:leftBox[2]]
+	#print((leftBox[2]-leftBox[0], leftBox[3] - leftBox[1]))
 	#eyeObjs['left'] = 
 	# {
 	# 		'patch': leftImageData,
@@ -185,7 +204,7 @@ def getEyeFeats(image_path, clmfeatures):
 	# 		'height': leftHeight
 	# }
 
-	rightImageData = image[rightBox[0]:rightBox[2], rightBox[1]:rightBox[3]]
+	rightImageData = image[rightBox[1]:rightBox[3],rightBox[0]:rightBox[2]]
 	#eyeObjs['right'] = 
 	# {
 	# 		'patch': rightImageData,
