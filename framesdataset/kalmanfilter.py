@@ -2,13 +2,36 @@ import numpy as np
 
 class KalmanFilter:
 
-	def __init__(self, F, H, Q, R, P_initial, X_initial):
-		self.F = F
-		self.H = H
-		self.Q = Q
-		self.R = R
-		self.P = P_initial
-		self.X = X_initial
+	def __init__(self):
+		self.F = np.array([ [1, 0, 0, 0, 1, 0],
+						[0, 1, 0, 0, 0, 1],
+						[0, 0, 1, 0, 1, 0],
+						[0, 0, 0, 1, 0, 1],
+						[0, 0, 0, 0, 1, 0],
+						[0, 0, 0, 0, 0, 1]])
+		#Parameters Q and R may require some fine tuning
+		self.Q = np.array([ [1/4,  0, 0, 0,  1/2,   0],
+						[0, 1/4,  0, 0,    0, 1/2],
+						[0, 0,   1/4, 0, 1/2,   0],
+						[0, 0,   0,  1/4,  0, 1/2],
+						[1/2, 0, 1/2, 0,    1,  0],
+						[0, 1/2,  0,  1/2,  0,  1]])
+		delta_t = 1/10 # The amount of time between frames
+		self.Q = self.Q * delta_t
+		self.H = np.array([ [1, 0, 0, 0, 0, 0],
+						[0, 1, 0, 0, 0, 0],
+						[0, 0, 1, 0, 0, 0],
+						[0, 0, 0, 1, 0, 0]])
+		pixel_error = 6.5 # We will need to fine tune this value
+		#This matrix represents the expected measurement error
+		self.R = pixel_error * np.identity(4)
+
+		self.P = 0.0001 * np.identity(6) #Initial covariance matrix
+		self.X = np.array([[200], [150], [250], [180], [0], [0]]) # Initial measurement matrix
+
+	def reset(self):
+		self.P = 0.0001 * np.identity(6) #Initial covariance matrix
+		self.X = np.array([[200], [150], [250], [180], [0], [0]]) # Initial measurement matrix
 
 	def update(self, z):
 		# TODO cache variables like the transpose of H
