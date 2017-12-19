@@ -32,7 +32,4 @@
 ../src/util.js
 ../src/webgazer.js
 ../src/ridgeRegTrained.js
-../src/ridgeRegTrained01.js
 ../src/svmWeightedReg.js
-../src/x_svm.json
-../src/y_svm.json
