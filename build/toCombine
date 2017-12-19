@@ -33,3 +33,4 @@
 ../src/webgazer.js
 ../src/ridgeRegTrained.js
 ../src/svmWeightedReg.js
+../src/sgdReg.js

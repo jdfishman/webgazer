@@ -17,13 +17,15 @@
         <!-- <script type="text/javascript" src="src/trained.json"></script> 
         <script type="text/javascript" src="src/x_svm.json"></script>
         <script type="text/javascript" src="src/y_svm.json"></script> -->
-        <script type="text/javascript" src="src/x_ridge_weights.json"></script>
-        <script type="text/javascript" src="src/y_ridge_weights.json"></script>
+        <!--<script type="text/javascript" src="src/x_ridge_weights.json"></script>
+        <script type="text/javascript" src="src/y_ridge_weights.json"></script>-->
+        <script type="text/javascript" src="src/x_sgd_weights.json"></script>
+        <script type="text/javascript" src="src/y_sgd_weights.json"></script>
         <script src="build/webgazer.js"></script>
         <script>
 window.onload = function() {
-        webgazer.addRegressionModule("ridgeRegTrained", webgazer.reg.RidgeRegTrained);
-        webgazer.setRegression('ridgeRegTrained')
+        webgazer.addRegressionModule("sgdReg", webgazer.reg.sgdReg);
+        webgazer.setRegression('sgdReg')
         //webgazer.setRegression('ridge')
         /* currently must set regression and tracker */
         
