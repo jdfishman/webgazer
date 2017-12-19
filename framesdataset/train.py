@@ -3,7 +3,7 @@
 # james_tompkin@brown.edu
 #
 
-import csv, cv2
+import csv, cv2, json
 import sklearn.svm as svm
 import sklearn.linear_model as lm
 import sklearn.preprocessing as prep
@@ -22,24 +22,36 @@ rightKalman = KalmanFilter()
 
 
 def main():
-	poly = prep.PolynomialFeatures(degree=2)
 	
 	print('STARTING TRAINING')
 	#feats, x_labels, y_labels = extract_train_data()
 	feats, x_labels, y_labels = load_train_data()
+	feats=np.array([feat[:-1] for feat in feats])
+	feats=np.array([feat/np.linalg.norm(feat) if np.linalg.norm(feat) > 0 else feat for feat in feats])
 
-	feats = poly.fit_transform(feats)
-
-	x_model, y_model = train_ridge(feats, x_labels, y_labels)
+	#x_model, y_model = train_ridge(feats, x_labels, y_labels)
 	#x_model, y_model = train_bayesian_ridge(feats, x_labels, y_labels)
+	#x_model, y_model = train_logistic(feats, x_labels, y_labels)
 	#x_model, y_model = train_lasso(feats, x_labels, y_labels)
 	#x_model, y_model = train_svm(feats, x_labels, y_labels)
-	#x_model, y_model = train_sgd(feats, x_labels, y_labels)
+	x_model, y_model = train_sgd(feats, x_labels, y_labels)
+
+	with open('x_sgd_weights.json','w') as f:
+		json.dump(np.concatenate((x_model.coef_, x_model.intercept_)).tolist(), f)
+
+	with open('y_sgd_weights.json','w') as f:
+		json.dump(np.concatenate((y_model.coef_, y_model.intercept_)).tolist(), f)
+
+	print(x_model.coef_)
+	print(x_model.intercept_)
+	print(y_model.coef_)
+	print(y_model.intercept_)
 
 	print('STARTING TESTING')
 	#feats, x_labels, y_labels = extract_test_data()
 	feats, x_labels, y_labels = load_test_data()
-	feats = poly.fit_transform(feats)
+	feats=np.array([feat[:-1] for feat in feats])
+	feats=np.array([feat/np.linalg.norm(feat) if np.linalg.norm(feat) > 0 else feat for feat in feats])
 	test_model(x_model, y_model, feats, x_labels, y_labels)
 
 def extract_train_data(tobii=True):
@@ -60,8 +72,8 @@ def extract_data(train, tobii=True):
 
 	with open(file_path, 'r') as f:
 		for dir_ in f.readlines():
-			#leftKalman.reset()
-			#rightKalman.reset()
+			leftKalman.reset()
+			rightKalman.reset()
 
 			dir_ = dir_[:-1]
 			csv_path = dir_ + '/gazePredictions.csv'
@@ -135,8 +147,13 @@ def train_svm(feats, x_labels, y_labels):
 	return x_model, y_model
 
 def train_sgd(feats, x_labels, y_labels):
-	x_model = lm.SGDRegressor(tol=1e-3).fit(feats,x_labels)
-	y_model = lm.SGDRegressor(tol=1e-3).fit(feats,y_labels)
+	x_model = lm.SGDRegressor(max_iter=1000,verbose=1).fit(feats,x_labels)
+	y_model = lm.SGDRegressor(max_iter=1000,verbose=1).fit(feats,y_labels)
+	return x_model, y_model	
+
+def train_logistic(feats, x_labels, y_labels):
+	x_model = lm.TheilSenRegressor().fit(feats,x_labels)
+	y_model = lm.TheilSenRegressor().fit(feats,y_labels)
 	return x_model, y_model	
 
 def test_model(x_model, y_model, feats, x_labels, y_labels):
@@ -149,20 +166,18 @@ def getEyeFeats(image_path, clmfeatures):
 
 	#Apply Kalman Filtering
 	leftBox = [clmfeatures[23][0], clmfeatures[24][1], clmfeatures[25][0], clmfeatures[26][1]]
-	#leftBox = leftKalman.update(leftBox)
+	leftBox = leftKalman.update(leftBox)
 	leftBox = [int(round(max(x,0))) for x in leftBox]
 
 	#Apply Kalman Filtering
 	rightBox = [clmfeatures[30][0], clmfeatures[29][1], clmfeatures[28][0], clmfeatures[31][1]]
-	#rightBox = rightKalman.update(rightBox)
+	rightBox = rightKalman.update(rightBox)
 	rightBox = [int(round(max(x,0))) for x in rightBox]
 
-	if leftBox[2] - leftBox[0] == 0 or rightBox[2] - rightBox[0] == 0:
-		print('an eye patch had zero width')
-		return None
-
-	if leftBox[3] - leftBox[1] == 0 or rightBox[3] - rightBox[1] == 0:
-		print('an eye patch had zero height')
+	if leftBox[2] - leftBox[0] == 0 or \
+		rightBox[2] - rightBox[0] == 0 or \
+		leftBox[3] - leftBox[1] == 0 or \
+		rightBox[3] - rightBox[1] == 0:
 		return None
 
 	image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
