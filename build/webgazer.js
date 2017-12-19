@@ -11877,9 +11877,33 @@ var mosseFilterResponses = function() {
             return null;
         }
 
-        var coefficientsX = trainedCoefficientsX;
-        var coefficientsY = trainedCoefficientsY;
-        /*
+        var eyeFeats = getEyeFeats(eyesObj);
+        var featsMag = 0;
+        for (i = 0; i < eyeFeats.length; i++) {
+            featsMag += eyeFeats[i]**2;
+        }
+        featsMag = Math.sqrt(featsMag);
+        normalizedEyeFeats = eyeFeats.map(function(x) {return x / featsMag;});
+
+        normalizedEyeFeats.push(1); //bias term
+
+        var predictedXtrained = 0;
+        for(var i=0; i< normalizedEyeFeats.length; i++){
+            predictedXtrained += normalizedEyeFeats[i] * trainedCoefficientsX[i];
+        }
+        var predictedYtrained = 0;
+        for(var i=0; i< normalizedEyeFeats.length; i++){
+            predictedYtrained += normalizedEyeFeats[i] * trainedCoefficientsY[i];
+        }
+
+        predictedXtrained = Math.floor(predictedXtrained*screen.width);
+        predictedYtrained = Math.floor(predictedYtrained*screen.height);
+
+
+
+        predictedX = predictedXtrained;
+        predictedY = predictedYtrained;
+
         if (this.eyeFeaturesClicks.length != 0) {
             var acceptTime = performance.now() - this.trailTime;
             var trailX = [];
@@ -11898,49 +11922,21 @@ var mosseFilterResponses = function() {
             var eyeFeatures = this.eyeFeaturesClicks.data.concat(trailFeat);
 
             var newCoefficientsX = ridge(screenXArray, eyeFeatures, ridgeParameter);
-            newCoefficientsX.push(0); //bias term
             var newCoefficientsY = ridge(screenYArray, eyeFeatures, ridgeParameter);
-            newCoefficientsY.push(0); //bias term
+
+            predictedXnew = 0;
+            predictedYnew = 0;
+            for (i = 0; i < eyeFeats.length; i++) {
+                predictedXnew += eyeFeats[i]*newCoefficientsX[i];
+                predictedYnew += eyeFeats[i]*newCoefficientsY[i];
+            }
 
             new_weight = Math.exp(-5/screenXArray.length);
             training_weight = 1-new_weight;
 
-            var xMag = 0;
-            for (i = 0; i < newCoefficientsX.length; i++) {
-                xMag += newCoefficientsX[i]**2;
-            }
-            xMag = Math.sqrt(xMag);
-            var yMag = 0;
-            for (i = 0; i < newCoefficientsY.length; i++) {
-                yMag += newCoefficientsY[i]**2;
-            }
-            yMag = Math.sqrt(yMag);
-
-            coefficientsX = trainedCoefficientsX.map(function(x) {return x * training_weight * xMag / trainedMagX}).map((a, i) => a + newCoefficientsX.map(function(x) {return x * new_weight} )[i]); 
-            coefficientsY = trainedCoefficientsY.map(function(x) {return x * training_weight * yMag / trainedMagY}).map((a, i) => a + newCoefficientsY.map(function(x) {return x * new_weight} )[i]);
-        }*/
-
-        var eyeFeats = getEyeFeats(eyesObj);
-        var featsMag = 0;
-        for (i = 0; i < eyeFeats.length; i++) {
-            featsMag += eyeFeats[i]**2;
+            predictedX = predictedXtrained*training_weight + predictedXnew*new_weight;
+            predictedY = predictedYtrained*training_weight + predictedYnew*new_weight;
         }
-        featsMag = Math.sqrt(featsMag);
-        normalizedEyeFeats = eyeFeats.map(function(x) {return x / featsMag;});
-
-        normalizedEyeFeats.push(1); //bias term
-
-        var predictedX = 0;
-        for(var i=0; i< normalizedEyeFeats.length; i++){
-            predictedX += normalizedEyeFeats[i] * coefficientsX[i];
-        }
-        var predictedY = 0;
-        for(var i=0; i< normalizedEyeFeats.length; i++){
-            predictedY += normalizedEyeFeats[i] * coefficientsY[i];
-        }
-
-        predictedX = Math.floor(predictedX*featsMag);
-        predictedY = Math.floor(predictedY*featsMag);
 
         return {
             x: predictedX,
