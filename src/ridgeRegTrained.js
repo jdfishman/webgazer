@@ -15,8 +15,9 @@
 
     //Parameters
     var trainedCoefficientsX;
+    var trainedMagX;
     var trainedCoefficientsY;
-    var trainedExamples = 0;
+    var trainedMagY;
 
     /**
      * Performs ridge regression, according to the Weka code.
@@ -128,9 +129,21 @@
         this.dataClicks = new webgazer.util.DataWindow(dataWindow);
         this.dataTrail = new webgazer.util.DataWindow(dataWindow);
 
-        trainedCoefficientsX = trainedData.coefficientsX;
-        trainedCoefficientsY = trainedData.coefficientsY;
-        trainedExamples = trainedData.n;
+        //Load in trained weights
+        trainedCoefficientsX = x_ridge_weights.map(function (x) {return x * screen.width});
+        trainedCoefficientsY = y_ridge_weights.map(function (x) {return x * screen.height});
+        //make unit vector
+        var xMag = 0;
+        for (i = 0; i < trainedCoefficientsX.length; i++) {
+            xMag += trainedCoefficientsX[i]**2;
+        }
+        trainedMagX = Math.sqrt(xMag);
+        var yMag = 0;
+        for (i = 0; i < trainedCoefficientsY.length; i++) {
+            yMag += trainedCoefficientsY[i]**2;
+        }
+        trainedMagY = Math.sqrt(yMag);
+
     };
 
     /**
@@ -176,7 +189,7 @@
             return null;
         }
 
-        var coefficientsX = trainedCoefficientsX;;
+        var coefficientsX = trainedCoefficientsX;
         var coefficientsY = trainedCoefficientsY;
         if (this.eyeFeaturesClicks.length != 0) {
             var acceptTime = performance.now() - this.trailTime;
@@ -196,15 +209,30 @@
             var eyeFeatures = this.eyeFeaturesClicks.data.concat(trailFeat);
 
             var newCoefficientsX = ridge(screenXArray, eyeFeatures, ridgeParameter);
+            newCoefficientsX.push(0); //bias term
             var newCoefficientsY = ridge(screenYArray, eyeFeatures, ridgeParameter);
+            newCoefficientsY.push(0); //bias term
 
-            var new_weight = Math.exp(-10/screenXArray.length);
-            var training_weight = 1-new_weight;
-            coefficientsX = trainedCoefficientsX.map(function(x) {return x * training_weight}).map((a, i) => a + newCoefficientsX.map(function(x) {return x * new_weight} )[i]); 
-            coefficientsY = trainedCoefficientsY.map(function(x) {return x * training_weight}).map((a, i) => a + newCoefficientsY.map(function(x) {return x * new_weight} )[i]);
+            new_weight = Math.exp(-5/screenXArray.length);
+            training_weight = 1-new_weight;
+
+            var xMag = 0;
+            for (i = 0; i < newCoefficientsX.length; i++) {
+                xMag += newCoefficientsX[i]**2;
+            }
+            xMag = Math.sqrt(xMag);
+            var yMag = 0;
+            for (i = 0; i < newCoefficientsY.length; i++) {
+                yMag += newCoefficientsY[i]**2;
+            }
+            yMag = Math.sqrt(yMag);
+
+            coefficientsX = trainedCoefficientsX.map(function(x) {return x * training_weight * xMag / trainedMagX}).map((a, i) => a + newCoefficientsX.map(function(x) {return x * new_weight} )[i]); 
+            coefficientsY = trainedCoefficientsY.map(function(x) {return x * training_weight * yMag / trainedMagY}).map((a, i) => a + newCoefficientsY.map(function(x) {return x * new_weight} )[i]);
         }
 
         var eyeFeats = getEyeFeats(eyesObj);
+        eyeFeats.push(1); //bias term
         var predictedX = 0;
         for(var i=0; i< eyeFeats.length; i++){
             predictedX += eyeFeats[i] * coefficientsX[i];
